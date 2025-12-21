@@ -1,5 +1,5 @@
 '''
-    Оболочка программы MPSTWM
+    Оболочка программы TileFlow
 '''
 import gi
 import sys
@@ -18,16 +18,17 @@ test_translate = [
     ["rounding", "Rounding corners"],
     ["enabled", "Enabled"],
 ]
+PROGRAM_NAME = "TileFlow"
+PROGRAM_ID = "ru.sophron.tileflow"
 PROGRAM_TITLE = [
-    "Mpstwm Version 0.1",
-    "Mpstwm: Menu parser"
+    f"{PROGRAM_NAME} Version 0.1",
+    f"{PROGRAM_NAME}: Menu parser"
 ]
-PROGRAM_ID = "ru.sophron.mpstwm"
 
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs, title=PROGRAM_TITLE[0])
-        
+    
         # Инициализация виджетов
         self.create_main_window()
         self.header_button_modules()
@@ -41,7 +42,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.set_child(self.stack)
         self.header_bar = Gtk.HeaderBar()
         self.set_titlebar(self.header_bar)  
-    
+
     # Кнопки модулей
     def header_button_modules(self):
         button_new = Gtk.Button(icon_name="document-open")
@@ -81,16 +82,16 @@ class MainWindow(Gtk.ApplicationWindow):
             "<big>Press the top left button to select the configurator</big>"
         )
         self.stack.add_titled(starter_text, "label", "A label")
-    
+
     # Функция не реализованна
     def error_credit(self, _button):
         print("Function didn't created")
-    
+
     # Нажатие кнопки модули
     def button_new_clicked(self, _button):
         self.popover.set_parent(_button)
         self.popover.popup()
-    
+
     # Тестовая кнопка работы элементов
     def test_func(self, _button):
         print("button is clicked")
@@ -99,16 +100,16 @@ class MainWindow(Gtk.ApplicationWindow):
     def on_about_clicked(self, button):
         dialog = Adw.AboutWindow(
             transient_for=self,
-            application_name="MPSTWM",
+            application_name="TileFlow",
             application_icon="preferences-desktop",
             version="0.1",
             developer_name="Sophron Ragozin",
-            website="https://git.sophron.ru/sophron/itc_projects",
-            comments="Панель настройки тайлинговых оконных менеджеров"
+            website="https://github.com/sophrosha/tileflow",
+            comments="Тайлинговый конфигуратор с поддержкой модульности"
         )
         dialog.present()
 
-        
+
 # Активирую окно и представляю его
 def activate(app):
     window = MainWindow(application=app)
@@ -122,11 +123,12 @@ def main():
     app.run(None)
 
 
-class ModuleParserHyprland(Gtk.ApplicationWindow):
+class GuiHyprlandParser(Gtk.ApplicationWindow):
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs, title=PROGRAM_TITLE[1])
         self.set_default_size(700, 500)
-        self.list_parsed = self.init_parser("example_hyprland.conf")
+        self.list_parsed = self.init_parser("hyprland.conf")
+        self.entries = {}
 
         # Скроллинг
         self.scroll = Gtk.ScrolledWindow()
@@ -136,7 +138,7 @@ class ModuleParserHyprland(Gtk.ApplicationWindow):
         self.scroll.set_child(self.box)
         self.header_bar = Gtk.HeaderBar()
         self.set_titlebar(self.header_bar)
-        
+
         self.generate_elements()
 
     @staticmethod
@@ -144,13 +146,13 @@ class ModuleParserHyprland(Gtk.ApplicationWindow):
         config = HyprlandParser(file)
         config.load_config()
         return config.config_entries
-    
+
     def bool_value(key):
         if key == "True":
             return False
         else:
             return True
-    
+
     @staticmethod
     def convert_to_text(key):
         for element in test_translate:
@@ -159,8 +161,26 @@ class ModuleParserHyprland(Gtk.ApplicationWindow):
             else:
                 return str(key)
 
-    def is_index(self, ind):
-        print(f"Button is a {ind}")
+    def bool_values(self, switch, index):
+        #print(index)
+        value_config = self.list_parsed[index]['value']
+        if switch is True:
+            if value_config == 'true':
+                return True
+            else:
+                return False
+        else:
+            if value_config == 'true':
+                self.list_parsed[index]['value'] = 'false'
+                print(self.list_parsed[index])
+                return 0
+            else:
+                self.list_parsed[index]['value'] = 'true'
+                print(self.list_parsed[index])
+                return 0
+
+    def save_element(self, index, value):
+        pass
 
     def generate_elements(self):
         for index, element in enumerate(self.list_parsed):
@@ -187,19 +207,26 @@ class ModuleParserHyprland(Gtk.ApplicationWindow):
                 self.box.append(element_container)
                 if value.lower() == "true" or value.lower() == "false":
                     label = Gtk.Label(label=self.convert_to_text(key))
-                    button = Gtk.Button()
-                    button.connect("clicked", lambda widget, i=index: self.is_index(self.list_parsed[i]['id']))
+                    button = Gtk.Switch()
+                    button.props.active = self.bool_values(True, index)
+                    button.props.halign = Gtk.Align.CENTER
+                    button.connect("notify::active", lambda widget, pspec, i=index: self.bool_values(False, i))
                     element_container.append(label)
                     element_container.append(button)
                 else:
                     label = Gtk.Label(label=self.convert_to_text(key))
-                    element_text = Gtk.Entry()
                     element_container.append(label)
+
+                    element_text = Gtk.Entry()
+                    element_text.set_text(value)
                     element_container.append(element_text)
+
+                    button_save = Gtk.Button(label="save")
+                    element_container.append(button_save)
         self.set_child(self.scroll)
 
 def activatemodule(app):
-    window = ModuleParserHyprland(application=app)  
+    window = GuiHyprlandParser(application=app)
     window.present()
 
 def main_hyprland_module():
@@ -209,3 +236,4 @@ def main_hyprland_module():
 
 if __name__ == "__main__":
     main_hyprland_module()
+    #main()
